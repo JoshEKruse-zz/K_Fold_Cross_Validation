@@ -17,30 +17,39 @@ import numpy as np
 #                       trains a model using X_train,y_train,
 #                       then outputs a vector of predictions (one element for every row of X_new).
 #   fold_vec, a vector of integer fold ID numbers (from 1 to K).
-def KFoldCV( X_mat, y_vec, ComputePredictions ):
+def KFoldCV( X_mat, y_vec, ComputePredictions=0, fold_vec=np.empty(5) ):
+
+    K = fold_vec.shape[0]
 
     # The function should begin by initializing a variable called error_vec, a numeric vector of size K.
-    error_vec = np.empty( 0 )
-    # The function should have a for loop over the unique values k in fold_vec (should be from 1 to K).
-    fold_vec = np.empty( 0 )
+    error_vec = np.empty( K )
 
-    for index in range( fold_vec ) :
+    id_vec = np.random.randint( 1, K+1, X_mat.shape[0] )
+
+    # The function should have a for loop over the unique values k in fold_vec (should be from 1 to K).
+    for fold_id in fold_vec :
         # first define X_new,y_new based on the observations for which the corresponding elements of fold_vec
         #   are equal to the current fold ID k.
-        X_new, y_new = np.empty( 0 ), np.empty( 0 )
-
-        # then define X_train,y_train using all the other observations.
-        X_train, y_train = np.empty( 0 ), np.empty( 0 )
+        for index in range( X_mat.shape[0] ):
+            if( fold_id == id_vec[index] ) :
+                X_new = np.append( X_new, X_mat[ index ] )
+                Y_new = np.append( Y_new, y_vec[ index ] )
+            # then define X_train,y_train using all the other observations
+            else :
+                X_train = np.append( X_train, X_mat[ index ] )
+                y_train = np.append( y_train, y_vec[ index ] )
 
         # then call ComputePredictions and store the result in a variable named pred_new.
-        pred_new = ComputePredictions()
+        pred_new = ComputePredictions( X_train, y_train, X_new )
 
         # then compute the zero-one loss of pred_new with respect to y_new
         #   and store the mean (error rate) in the corresponding entry of error_vec.
-        error_vec[ index ] = 0
+        #error_vec[ index ] = 0
 
     # At the end of the algorithm you should return error_vec.
     return error_vec
+
+KFoldCV( np.empty((100,100)), np.empty(100))
 
 # function: NearestNeighborsCV
 # input arguments
