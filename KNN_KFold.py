@@ -8,6 +8,15 @@
 
 # imports
 import numpy as np
+from sklearn.neighbors import KNeighborsClassifier as skKnn
+from sklearn import preprocessing
+
+def knn_wrap( X_train, y_train, X_new ) :
+    lab_enc = preprocessing.LabelEncoder()
+    Y_encoded = lab_enc.fit_transform(y_train)
+    knn = skKnn(n_neighbors=2)
+    knn.fit(X_train, Y_encoded)
+    return knn.predict( X_new )
 
 # Function: KFoldCV
 # input arguments:
@@ -17,39 +26,59 @@ import numpy as np
 #                       trains a model using X_train,y_train,
 #                       then outputs a vector of predictions (one element for every row of X_new).
 #   fold_vec, a vector of integer fold ID numbers (from 1 to K).
-def KFoldCV( X_mat, y_vec, ComputePredictions=0, fold_vec=np.empty(5) ):
+def KFoldCV( X_mat, y_vec, ComputePredictions, fold_vec ):
 
     K = fold_vec.shape[0]
+    X_size = X_mat.shape[0]
 
     # The function should begin by initializing a variable called error_vec, a numeric vector of size K.
     error_vec = np.empty( K )
 
-    id_vec = np.random.randint( 1, K+1, X_mat.shape[0] )
+    id_vec = np.random.randint( 1, K+1, X_mat.shape[ 0 ] )
+
+    X_new = []
+    Y_new = []
+    X_train = []
+    y_train = []
 
     # The function should have a for loop over the unique values k in fold_vec (should be from 1 to K).
     for fold_id in fold_vec :
         # first define X_new,y_new based on the observations for which the corresponding elements of fold_vec
         #   are equal to the current fold ID k.
-        for index in range( X_mat.shape[0] ):
-            if( fold_id == id_vec[index] ) :
-                X_new = np.append( X_new, X_mat[ index ] )
-                Y_new = np.append( Y_new, y_vec[ index ] )
+        for index in range(X_mat.shape[0]):
+            if (fold_id == id_vec[index]):
+                X_new.append(X_mat[index].tolist())
+                Y_new.append(y_vec[index].tolist())
+                #X_new = np.append(X_new, X_mat[index])
+                #Y_new = np.append(Y_new, y_vec[index])
             # then define X_train,y_train using all the other observations
-            else :
-                X_train = np.append( X_train, X_mat[ index ] )
-                y_train = np.append( y_train, y_vec[ index ] )
+            else:
+                X_train.append(X_mat[index].tolist())
+                y_train.append(y_vec[index].tolist())
+                #X_train = np.append(X_train, X_mat[index])
+                #y_train = np.append(y_train, y_vec[index])
 
-        # then call ComputePredictions and store the result in a variable named pred_new.
-        pred_new = ComputePredictions( X_train, y_train, X_new )
+        # then call ComputePredictions
+        pred_new = ComputePredictions(X_train, y_train, X_new)
 
         # then compute the zero-one loss of pred_new with respect to y_new
         #   and store the mean (error rate) in the corresponding entry of error_vec.
-        #error_vec[ index ] = 0
+        error_vec[fold_id-1] = np.mean(Y_new != pred_new)
+        #error_vec[ fold_id-1 ] = 1 - knn.score( X_new, Y_encoded )
 
     # At the end of the algorithm you should return error_vec.
     return error_vec
 
-KFoldCV( np.empty((100,100)), np.empty(100))
+fold_vec = np.array([1, 2, 3, 4, 5])
+X_mat = np.array([[1,2,3],
+                  [3,2,1],
+                  [1,2,3],
+                  [1,2,3],
+                  [3,2,1],
+                  [1,2,3]
+                  ])
+Y_vec = np.array([1,0,1,1,0,1])
+print(KFoldCV( X_mat, Y_vec, knn_wrap, fold_vec))
 
 # function: NearestNeighborsCV
 # input arguments
