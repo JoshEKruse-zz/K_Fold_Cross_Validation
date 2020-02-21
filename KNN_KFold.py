@@ -34,7 +34,7 @@ def knn_wrap( X_train, y_train, X_new ) :
 #                       trains a model using X_train,y_train,
 #                       then outputs a vector of predictions (one element for every row of X_new).
 #   fold_vec, a vector of integer fold ID numbers (from 1 to K).
-def KFoldCV( X_mat, y_vec, ComputePredictions, fold_vec, color="r" ):
+def KFoldCV( X_mat, y_vec, ComputePredictions, fold_vec ):
 
     X_mat = np.array(X_mat)
     y_vec = np.array(y_vec)
