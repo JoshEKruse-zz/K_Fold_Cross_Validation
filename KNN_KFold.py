@@ -13,6 +13,8 @@ from sklearn import preprocessing
 from sklearn.preprocessing import scale
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from gradient_descent import gradient_descent
 
 num_neigh = 5
 
@@ -73,6 +75,9 @@ def KFoldCV( X_mat, y_vec, ComputePredictions, fold_vec, color="r" ):
                 #y_train = np.append(y_train, y_vec[index])
 
         # then call ComputePredictions
+        X_train = np.array(X_train)
+        y_train = np.array(y_train)
+        X_new = np.array(X_new)
         pred_new = ComputePredictions( X_train, y_train, X_new )
 
         if(pred_new.ndim > 1):
@@ -153,19 +158,19 @@ def BaselineFunciton( X_mat, y_vec, X_new ) :
     X_new = np.array(X_new)
     return np.zeros(X_new.shape[0])
 
+def Gradient_Wrapper( X_mat, y_vec, X_new):
+    weightVec = gradient_descent( X_mat, y_vec, 0.1, 600 )
+    return np.dot(X_new, weightVec)
 
 # First scale the inputs (each column should have mean 0 and variance 1).
 #   You can do this by subtracting away the mean and then dividing by the standard deviation of each column
 #   (or just use a standard function like scale in R).
 # read data from csv
-all_data = np.genfromtxt('SAheart.data', delimiter=",")
+all_data = np.genfromtxt('spam.data', delimiter=" ")
 # get size of data
 size = all_data.shape[1] - 1
-
 # set inputs to everything but last col, and scale
-all_data = np.delete(all_data, 0, axis=0)
 X = scale(np.delete(all_data, size, axis=1))
-
 # set outputs to last col of data
 y = all_data[:, size]
 
@@ -221,10 +226,12 @@ print("{: >11} {: >4} {: >4}".format("4", count[0], count[1]))
 result_base = KFoldCV(X, y, BaselineFunciton, test_fold_vec)
 base_labels = ['Base', 'Base', 'Base', 'Base']
 plt.scatter( result_base[0], base_labels )
+
 #   (2) NearestNeighborsCV,
 result_nearest = KFoldCV(X, y, NearestNeighborsCV_Wrapper, test_fold_vec, "b-")
 nearest_labels = ['Nearest', 'Nearest', 'Nearest', 'Nearest']
 plt.scatter( result_nearest[0], nearest_labels )
+
 #   (3) overfit 1-nearest neighbors model. Plot the resulting test error values as a function of the data set,
 #       in order to show that the NearestNeighborsCV is more accurate than the other two models.
 num_neigh = 1
@@ -232,22 +239,60 @@ result_over = KFoldCV(X, y, knn_wrap, test_fold_vec, "g-")
 over_labels = ['Overfit', 'Overfit', 'Overfit', 'Overfit']
 plt.scatter( result_over[0], over_labels )
 
+#   (4) Gradient Descent
+result_grad = KFoldCV(X, y, Gradient_Wrapper, test_fold_vec, "g-")
+grad_labels = ['Gradient', 'Gradient', 'Gradient', 'Gradient']
+plt.scatter( result_grad[0], grad_labels )
+
+plt.title("Percent of Error Comparison")
+plt.xlim(left=0)
 plt.show()
 
 base_label = "Baseline"
 knn_label = "K Nearest Neighbor"
 over_label = "Overfit KNN"
+grad_label = "Gradient Descent"
 
 for index in range(4) :
-    fpr, tpr, _ = roc_curve(result_base[1][index], result_base[2][index])
-    plt.plot(fpr,tpr,"r-",linewidth=".5",label=base_label)
-    fpr, tpr, _ = roc_curve(result_nearest[1][index], result_nearest[2][index])
-    plt.plot(fpr,tpr,"b-",linewidth=".5",label=knn_label)
-    fpr, tpr, _ = roc_curve(result_over[1][index], result_over[2][index])
-    plt.plot(fpr, tpr, "g-",linewidth=".5",label=over_label)
+    fpr, tpr, thr = roc_curve(result_base[1][index], result_base[2][index])
+    plt.plot(fpr,tpr,"r-",linewidth=".4",label=base_label)
+
+    fpr, tpr, thr = roc_curve(result_nearest[1][index], result_nearest[2][index])
+    plt.plot(fpr,tpr,"b-",linewidth=".6",label=knn_label)
+    plt.plot(fpr[int(len(fpr)/2)], tpr[int(len(tpr)/2)], "b.")
+
+    fpr, tpr, thr = roc_curve(result_over[1][index], result_over[2][index])
+    plt.plot(fpr, tpr, "g-",linewidth=".4",label=over_label)
+    plt.plot(fpr[int(len(fpr)/2)], tpr[int(len(tpr)/2)], "g.")
+
+    fpr, tpr, thr = roc_curve(result_grad[1][index], result_grad[2][index])
+    plt.plot(fpr, tpr, "c-", linewidth=".4", label=grad_label)
+    plt.plot(fpr[int(len(fpr) / 2)], tpr[int(len(tpr) / 2)], "c.")
+
     base_label = "_nolegend_"
     knn_label = "_nolegend_"
     over_label = "_nolegend_"
+    grad_label = "_nolegend_"
 
+plt.title("ROC curves, 4-fold CV")
+plt.ylabel("TPR")
+plt.xlabel("FPR")
 plt.legend()
+plt.show()
+
+for index in range(4) :
+    score_base = roc_auc_score(result_base[1][index], result_base[2][index])
+    plt.scatter( score_base, "Baseline", c="r" )
+
+    score_nearest = roc_auc_score(result_nearest[1][index], result_nearest[2][index])
+    plt.scatter( score_nearest, "Nearest", c="b" )
+
+    score_over = roc_auc_score(result_over[1][index], result_over[2][index])
+    plt.scatter( score_over, "Overfitting", c="g")
+
+    score_grad = roc_auc_score(result_grad[1][index], result_grad[2][index])
+    plt.scatter( score_grad, "Gradient", c="c")
+
+plt.title("ROC Area Under Curve Comparison")
+plt.xlim(right=1)
 plt.show()
